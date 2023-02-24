@@ -12,6 +12,10 @@ const userRoutes = require('./routes/user');
 const path = require('path');
 // importer le module morgan pour enregistrer les journaux d'accès HTTP
 const morgan = require('morgan');
+// Importer le module helmet pour sécuriser l'application Express
+const helmet = require("helmet");
+// Importer le module express-rate-limit pour limiter le taux de requêtes pour une route spécifique
+const rateLimit = require("express-rate-limit");
 // importer le module dotenv pour charger les variables d'environnement depuis un fichier .env
 const dotEnv = require("dotenv");
 // charger les variables d'environnement à partir du fichier .env
@@ -31,8 +35,15 @@ const app = express();
 app.use((req, res, next) => {
    res.setHeader('Access-Control-Allow-Origin', '*');
    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
+   res.setHeader("Cross-Origin-Resource-Policy", "same-site");
    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
    next();
+});
+
+const limiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour in milliseconds
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again in an hour",
 });
 
 // ajouter le middleware body-parser pour faciliter la manipulation des requêtes HTTP
@@ -49,9 +60,14 @@ app.use(morgan('dev'));
 
 // ajouter les routes pour les utilisateurs
 app.use('/api/auth', userRoutes);
+// Ajouter le middleware express-rate-limit pour limiter le taux de requêtes pour une route spécifique
+app.use(limiter);
 
-// ajouter un middleware pour servir des fichiers statiques (images)
+// Ajouter un middleware pour servir des fichiers statiques (images) depuis le répertoire "images"
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
-// exporter l'application
+// Ajouter le middleware helmet pour sécuriser l'application Express
+app.use(helmet());
+
+// Exporter l'application Express pour qu'elle puisse être utilisée dans d'autres fichiers
 module.exports = app;
